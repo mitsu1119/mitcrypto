@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rug::{integer::IsPrime, Integer};
 
 use crate::error::MathError;
@@ -6,21 +8,31 @@ type Result<T> = std::result::Result<T, MathError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FiniteField {
-    p: Integer,
+    order: Integer,
 }
 
 impl FiniteField {
-    pub fn new(p: Integer) -> Result<Self> {
-        match p.is_probably_prime(100) {
-            IsPrime::Yes | IsPrime::Probably => Ok(Self { p }),
+    pub fn new(order: Integer) -> Result<Self> {
+        match order.is_probably_prime(100) {
+            IsPrime::Yes | IsPrime::Probably => Ok(Self { order }),
             _ => Err(MathError::UnimplementedError(
                 "finite field whose order is a composite number".to_string(),
             )),
         }
     }
 
-    pub fn new_unchecked(p: Integer) -> Self {
-        Self { p }
+    pub fn new_unchecked(order: Integer) -> Self {
+        Self { order }
+    }
+
+    pub fn order(&self) -> &Integer {
+        &self.order
+    }
+}
+
+impl Display for FiniteField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Finite Field of size {}", self.order())
     }
 }
 
@@ -41,7 +53,7 @@ mod tests {
         ];
         let res = [
             Ok(FiniteField {
-                p: Integer::from(5),
+                order: Integer::from(5),
             }),
             Err(MathError::UnimplementedError(
                 "finite field whose order is a composite number".to_string(),
