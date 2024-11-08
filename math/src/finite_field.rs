@@ -13,10 +13,14 @@ impl FiniteField {
     pub fn new(p: Integer) -> Result<Self> {
         match p.is_probably_prime(100) {
             IsPrime::Yes | IsPrime::Probably => Ok(Self { p }),
-            _ => Err(MathError::ValueError(
-                "the order of a finite field mut be a prime".to_string(),
+            _ => Err(MathError::UnimplementedError(
+                "finite field whose order is a composite number".to_string(),
             )),
         }
+    }
+
+    pub fn new_unchecked(p: Integer) -> Self {
+        Self { p }
     }
 }
 
@@ -32,13 +36,21 @@ mod tests {
         let tests = [
             FiniteField::new(Integer::from(5)),
             FiniteField::new(Integer::from(10)),
+            FiniteField::new(Integer::from(4)),
+            FiniteField::new(Integer::from(100)),
         ];
         let res = [
             Ok(FiniteField {
                 p: Integer::from(5),
             }),
-            Err(MathError::ValueError(
-                "the order of a finite field mut be a prime".to_string(),
+            Err(MathError::UnimplementedError(
+                "finite field whose order is a composite number".to_string(),
+            )),
+            Err(MathError::UnimplementedError(
+                "finite field whose order is a composite number".to_string(),
+            )),
+            Err(MathError::UnimplementedError(
+                "finite field whose order is a composite number".to_string(),
             )),
         ];
 
