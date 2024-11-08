@@ -1,0 +1,10 @@
+[package]
+name = "mitcrypto"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["math"]
+
+[dependencies]
+math = { path = "./math" }
