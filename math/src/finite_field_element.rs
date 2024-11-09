@@ -1,5 +1,8 @@
 use core::panic;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
 
 use rug::Integer;
 
@@ -82,6 +85,12 @@ impl<'a> Sub for FiniteFieldElement<'a> {
         let mut res = self;
         res -= rhs;
         res
+    }
+}
+
+impl<'a> Display for FiniteFieldElement<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.x)
     }
 }
 
