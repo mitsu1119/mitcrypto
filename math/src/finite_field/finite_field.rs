@@ -32,7 +32,7 @@ impl FiniteField {
     }
 
     pub fn elem(&self, x: Integer) -> FiniteFieldElement {
-        FiniteFieldElement::new(&self, x)
+        FiniteFieldElement::new(self, x)
     }
 }
 

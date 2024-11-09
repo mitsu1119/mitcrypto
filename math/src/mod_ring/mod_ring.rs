@@ -4,6 +4,8 @@ use rug::Integer;
 
 use crate::error::MathError;
 
+use super::mod_ring_element::ZmodElement;
+
 type Result<T> = std::result::Result<T, MathError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,6 +26,10 @@ impl Zmod {
 
     pub fn order(&self) -> &Integer {
         &self.order
+    }
+
+    pub fn elem(&self, x: Integer) -> ZmodElement {
+        ZmodElement::new(self, x)
     }
 }
 
