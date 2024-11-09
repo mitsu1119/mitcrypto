@@ -1,5 +1,5 @@
 use core::panic;
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use rug::Integer;
 
@@ -30,16 +30,27 @@ impl<'a> FiniteFieldElement<'a> {
         if self.parent != rhs.parent {
             panic!(
                 "{}",
-                MathError::TypeError(format!(
-                    "unsupported operand parent(s) for +: {} and {}",
-                    self.parent, rhs.parent
-                ))
+                MathError::unsupported_operand("+", self.parent, rhs.parent)
             );
         }
 
         self.x += rhs.x;
         if &self.x >= self.parent.order() {
             self.x -= self.parent.order()
+        }
+    }
+
+    fn sub(&mut self, rhs: Self) {
+        if self.parent != rhs.parent {
+            panic!(
+                "{}",
+                MathError::unsupported_operand("-", self.parent, rhs.parent)
+            )
+        }
+
+        self.x -= rhs.x;
+        if self.x < 0 {
+            self.x += self.parent.order();
         }
     }
 }
@@ -55,6 +66,21 @@ impl<'a> Add for FiniteFieldElement<'a> {
     fn add(self, rhs: Self) -> Self::Output {
         let mut res = self;
         res += rhs;
+        res
+    }
+}
+
+impl<'a> SubAssign for FiniteFieldElement<'a> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.sub(rhs);
+    }
+}
+
+impl<'a> Sub for FiniteFieldElement<'a> {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut res = self;
+        res -= rhs;
         res
     }
 }
@@ -107,5 +133,35 @@ mod tests {
         let fp2 = FiniteField::new(13.into()).unwrap();
 
         let _ = fp1.elem(3.into()) + fp2.elem(3.into());
+    }
+
+    #[test]
+    fn sub() {
+        let fp = FiniteField::new(11.into()).unwrap();
+        let tests = [
+            (fp.elem(3.into()), fp.elem(3.into())),
+            (fp.elem(10.into()), fp.elem(5.into())),
+            (fp.elem(100.into()), fp.elem(99.into())),
+            (fp.elem(3.into()), fp.elem((-20).into())),
+        ];
+        let res = [
+            fp.elem(0.into()),
+            fp.elem(5.into()),
+            fp.elem(1.into()),
+            fp.elem(1.into()),
+        ];
+
+        for (t, r) in tests.into_iter().zip(res) {
+            assert_eq!(t.0 - t.1, r);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn sub_err() {
+        let fp1 = FiniteField::new(11.into()).unwrap();
+        let fp2 = FiniteField::new(13.into()).unwrap();
+
+        let _ = fp1.elem(3.into()) - fp2.elem(3.into());
     }
 }
