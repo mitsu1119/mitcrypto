@@ -1,7 +1,7 @@
 use core::panic;
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
 use rug::Integer;
@@ -72,6 +72,32 @@ impl<'a> ZmodElement<'a> {
             self.x %= self.parent.order();
         }
     }
+
+    fn div(&mut self, rhs: Self) {
+        if self.parent != rhs.parent {
+            panic!(
+                "{}",
+                MathError::unsupported_operand("/", self.parent, rhs.parent)
+            )
+        }
+
+        self.x *= match rhs.x.invert(self.parent.order()) {
+            Ok(rhs_inv) => rhs_inv,
+            Err(rhs) => {
+                panic!(
+                    "{}",
+                    MathError::ZeroDivisionError(format!(
+                        "inverse of Mod({}, {}) is not exist",
+                        rhs,
+                        self.parent.order()
+                    ))
+                )
+            }
+        };
+        if &self.x >= self.parent.order() {
+            self.x %= self.parent.order();
+        }
+    }
 }
 
 impl<'a> AddAssign for ZmodElement<'a> {
@@ -115,6 +141,21 @@ impl<'a> Mul for ZmodElement<'a> {
     fn mul(self, rhs: Self) -> Self::Output {
         let mut res = self;
         res *= rhs;
+        res
+    }
+}
+
+impl<'a> DivAssign for ZmodElement<'a> {
+    fn div_assign(&mut self, rhs: Self) {
+        self.div(rhs);
+    }
+}
+
+impl<'a> Div for ZmodElement<'a> {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self::Output {
+        let mut res = self;
+        res /= rhs;
         res
     }
 }
@@ -231,5 +272,43 @@ mod tests {
         let r2 = Zmod::new(13.into()).unwrap();
 
         let _ = r1.elem(3.into()) * r2.elem(3.into());
+    }
+
+    #[test]
+    fn div() {
+        let fp = Zmod::new(20.into()).unwrap();
+        let tests = [
+            (fp.elem(3.into()), fp.elem(3.into())),
+            (fp.elem(11.into()), fp.elem(7.into())),
+            (fp.elem(101.into()), fp.elem(97.into())),
+            (fp.elem(5.into()), fp.elem((-17).into())),
+        ];
+        let res = [
+            fp.elem(1.into()),
+            fp.elem(13.into()),
+            fp.elem(13.into()),
+            fp.elem(15.into()),
+        ];
+
+        for (t, r) in tests.into_iter().zip(res) {
+            assert_eq!(t.0 / t.1, r);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn div_parent_err() {
+        let r1 = Zmod::new(20.into()).unwrap();
+        let r2 = Zmod::new(30.into()).unwrap();
+
+        let _ = r1.elem(3.into()) / r2.elem(3.into());
+    }
+
+    #[test]
+    #[should_panic]
+    fn div_zerodiv_err() {
+        let r = Zmod::new(20.into()).unwrap();
+
+        let _ = r.elem(3.into()) / r.elem(10.into());
     }
 }
