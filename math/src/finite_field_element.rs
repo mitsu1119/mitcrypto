@@ -1,7 +1,7 @@
 use core::panic;
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
 use rug::Integer;
@@ -70,6 +70,32 @@ impl<'a> FiniteFieldElement<'a> {
             self.x %= self.parent.order();
         }
     }
+
+    fn div(&mut self, rhs: Self) {
+        if self.parent != rhs.parent {
+            panic!(
+                "{}",
+                MathError::unsupported_operand("/", self.parent, rhs.parent)
+            )
+        }
+
+        self.x *= match rhs.x.invert(self.parent.order()) {
+            Ok(rhs_inv) => rhs_inv,
+            Err(rhs) => {
+                panic!(
+                    "{}",
+                    MathError::ZeroDivisionError(format!(
+                        "inverse of Mod({}, {}) is not exist",
+                        rhs,
+                        self.parent.order()
+                    ))
+                )
+            }
+        };
+        if &self.x >= self.parent.order() {
+            self.x %= self.parent.order();
+        }
+    }
 }
 
 impl<'a> AddAssign for FiniteFieldElement<'a> {
@@ -113,6 +139,21 @@ impl<'a> Mul for FiniteFieldElement<'a> {
     fn mul(self, rhs: Self) -> Self::Output {
         let mut res = self;
         res *= rhs;
+        res
+    }
+}
+
+impl<'a> DivAssign for FiniteFieldElement<'a> {
+    fn div_assign(&mut self, rhs: Self) {
+        self.div(rhs);
+    }
+}
+
+impl<'a> Div for FiniteFieldElement<'a> {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self::Output {
+        let mut res = self;
+        res /= rhs;
         res
     }
 }
@@ -229,5 +270,43 @@ mod tests {
         let fp2 = FiniteField::new(13.into()).unwrap();
 
         let _ = fp1.elem(3.into()) * fp2.elem(3.into());
+    }
+
+    #[test]
+    fn div() {
+        let fp = FiniteField::new(11.into()).unwrap();
+        let tests = [
+            (fp.elem(3.into()), fp.elem(3.into())),
+            (fp.elem(10.into()), fp.elem(5.into())),
+            (fp.elem(100.into()), fp.elem(98.into())),
+            (fp.elem(3.into()), fp.elem((-20).into())),
+        ];
+        let res = [
+            fp.elem(1.into()),
+            fp.elem(2.into()),
+            fp.elem(10.into()),
+            fp.elem(7.into()),
+        ];
+
+        for (t, r) in tests.into_iter().zip(res) {
+            assert_eq!(t.0 / t.1, r);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn div_parent_err() {
+        let fp1 = FiniteField::new(11.into()).unwrap();
+        let fp2 = FiniteField::new(13.into()).unwrap();
+
+        let _ = fp1.elem(3.into()) / fp2.elem(3.into());
+    }
+
+    #[test]
+    #[should_panic]
+    fn div_zerodiv_err() {
+        let fp = FiniteField::new(11.into()).unwrap();
+
+        let _ = fp.elem(3.into()) / fp.elem(99.into());
     }
 }
