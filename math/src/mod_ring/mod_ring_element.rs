@@ -4,11 +4,13 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
-use rug::Integer;
+use rug::{Complete, Integer};
 
 use crate::error::MathError;
 
 use super::mod_ring::Zmod;
+
+type Result<T> = std::result::Result<T, MathError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZmodElement<'a> {
@@ -98,6 +100,18 @@ impl<'a> ZmodElement<'a> {
             self.x %= self.parent.order();
         }
     }
+
+    pub fn pow(&self, e: &Integer) -> Result<Self> {
+        let x = self.x.pow_mod_ref(e, self.parent.order());
+        if let Some(res) = x {
+            Ok(Self::new(self.parent, res.complete()))
+        } else {
+            Err(MathError::ValueError(format!(
+                "pow({}, {}) over {} is not exist",
+                self.x, e, self.parent
+            )))
+        }
+    }
 }
 
 impl<'a> AddAssign for ZmodElement<'a> {
@@ -168,7 +182,9 @@ impl<'a> Display for ZmodElement<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::mod_ring::mod_ring::Zmod;
+    use rug::Integer;
+
+    use crate::{error::MathError, mod_ring::mod_ring::Zmod};
 
     #[test]
     fn zmod_element() {
@@ -310,5 +326,37 @@ mod tests {
         let r = Zmod::new(20.into()).unwrap();
 
         let _ = r.elem(3.into()) / r.elem(10.into());
+    }
+
+    #[test]
+    fn pow() {
+        let r = Zmod::new(20.into()).unwrap();
+        let tests = [
+            (r.elem(5.into()), Integer::from(5)),
+            (r.elem(12.into()), Integer::from(200)),
+            (r.elem(7.into()), Integer::from(-5)),
+            (r.elem(5.into()), Integer::from(0)),
+            (r.elem(0.into()), Integer::from(2)),
+            (r.elem(0.into()), Integer::from(0)),
+            (r.elem(5.into()), Integer::from(-5)),
+        ];
+        let res = [
+            Ok(r.elem(5.into())),
+            Ok(r.elem(16.into())),
+            Ok(r.elem(3.into())),
+            Ok(r.elem(1.into())),
+            Ok(r.elem(0.into())),
+            Ok(r.elem(1.into())),
+            Err(MathError::ValueError(format!(
+                "pow({}, {}) over {} is not exist",
+                Integer::from(5),
+                Integer::from(-5),
+                r
+            ))),
+        ];
+
+        for ((x, y), r) in tests.iter().zip(res) {
+            assert_eq!(x.pow(y), r);
+        }
     }
 }
