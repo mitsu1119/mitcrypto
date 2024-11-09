@@ -1,0 +1,8 @@
+[package]
+name = "rsa"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mitcrypto = { path = "../" }
+rug = "1.26.1"
