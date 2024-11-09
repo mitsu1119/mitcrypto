@@ -98,22 +98,20 @@ impl<'a> Display for FiniteFieldElement<'a> {
 mod tests {
     use crate::finite_field::FiniteField;
 
-    use super::FiniteFieldElement;
-
     #[test]
     fn finite_field_element() {
         let fp = FiniteField::new(11.into()).unwrap();
         let tests = [
-            FiniteFieldElement::new(&fp, 5.into()),
-            FiniteFieldElement::new(&fp, 30.into()),
-            FiniteFieldElement::new(&fp, (-5).into()),
-            FiniteFieldElement::new(&fp, (-30).into()),
+            fp.elem(5.into()),
+            fp.elem(30.into()),
+            fp.elem((-5).into()),
+            fp.elem((-30).into()),
         ];
         let res = [
-            FiniteFieldElement::new(&fp, 5.into()),
-            FiniteFieldElement::new(&fp, 8.into()),
-            FiniteFieldElement::new(&fp, 6.into()),
-            FiniteFieldElement::new(&fp, 3.into()),
+            fp.elem(5.into()),
+            fp.elem(8.into()),
+            fp.elem(6.into()),
+            fp.elem(3.into()),
         ];
 
         for (t, r) in tests.iter().zip(&res) {
