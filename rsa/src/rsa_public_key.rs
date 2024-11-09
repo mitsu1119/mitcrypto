@@ -1,17 +1,19 @@
-use mitcrypto::math::{error::MathError, finite_field::finite_field::FiniteField};
+use mitcrypto::math::{
+    error::MathError, finite_field::finite_field::FiniteField, mod_ring::mod_ring::Zmod,
+};
 use rug::Integer;
 
 type Result<T> = std::result::Result<T, MathError>;
 
 pub struct RsaPublicKey {
-    field: FiniteField,
+    ring: Zmod,
     e: Integer,
 }
 
 impl RsaPublicKey {
-    pub fn new(p: Integer, e: Integer) -> Result<Self> {
+    pub fn new(n: Integer, e: Integer) -> Result<Self> {
         Ok(Self {
-            field: FiniteField::new(p)?,
+            ring: Zmod::new(n)?,
             e,
         })
     }
@@ -26,8 +28,8 @@ mod tests {
     #[test]
     fn rsa() {
         assert!(RsaPublicKey::new(11.into(), 3.into()).is_ok());
-        assert!(RsaPublicKey::new(Integer::from_str_radix("99d1ef082468dab6f24206cfe2dca547beb8055bd9714743aa56ff0c6d6fc09c00be6ed6fbcee6cba68d6c5785456f050e091e9237d9f8e01e09ae6fcbddae3f95c4e397ac762fde619367732647c2d34ca9b8e3973213f6904634d4689430f7cc1f385e2e361b8f00ca5a27a7b8d70ba11d12993381d1a4687b60c839638ac5", 16).unwrap(), 0x1001.into()).is_ok());
-        assert!(RsaPublicKey::new(4.into(), 3.into()).is_err());
-        assert!(RsaPublicKey::new(Integer::from_str_radix("99d1ef082468dab6f24206cfe2dca547beb8055bd9714743aa56ff0c6d6fc09c00be6ed6fbcee6cba68d6c5785456f050e091e9237d9f8e01e09ae6fcbddae3f95c4e397ac762fde619367732647c2d34ca9b8e3973213f6904634d4689430f7cc1f385e2e361b8f00ca5a27a7b8d70ba11d12993381d1a4687b60c839638ac6", 16).unwrap(), 0x1001.into()).is_err());
+        assert!(RsaPublicKey::new((-11).into(), 3.into()).is_ok());
+        assert!(RsaPublicKey::new(Integer::from_str_radix("7123338efc611417ec92d33a84277f3a63b765736b38924905a9ba733f28e323d2aa79c5ab09db7734d220c52e46e9a6ff3f61aff745b0f340ac59891e9487a9994d4376fd89123b9547462539bc5971ca9f56169f0142b824f473754d5372e57358a652c3162ec19d1555da491dfc747a190aec0cd198f1dc95a3908ae44ebb", 16).unwrap(), 0x1001.into()).is_ok());
+        assert!(RsaPublicKey::new(0.into(), 3.into()).is_err());
     }
 }
