@@ -1,4 +1,4 @@
-use mitcrypto::math::{error::MathError, finite_field::FiniteField};
+use mitcrypto::math::{error::MathError, finite_field::finite_field::FiniteField};
 use rug::Integer;
 
 type Result<T> = std::result::Result<T, MathError>;

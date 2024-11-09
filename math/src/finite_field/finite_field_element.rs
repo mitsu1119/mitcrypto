@@ -6,7 +6,9 @@ use std::{
 
 use rug::Integer;
 
-use crate::{error::MathError, finite_field::FiniteField};
+use crate::error::MathError;
+
+use super::finite_field::FiniteField;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FiniteFieldElement<'a> {
@@ -166,7 +168,7 @@ impl<'a> Display for FiniteFieldElement<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::finite_field::FiniteField;
+    use crate::finite_field::finite_field::FiniteField;
 
     #[test]
     fn finite_field_element() {
