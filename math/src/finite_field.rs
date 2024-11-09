@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use rug::{integer::IsPrime, Integer};
 
-use crate::error::MathError;
+use crate::{error::MathError, finite_field_element::FiniteFieldElement};
 
 type Result<T> = std::result::Result<T, MathError>;
 
@@ -27,6 +27,10 @@ impl FiniteField {
 
     pub fn order(&self) -> &Integer {
         &self.order
+    }
+
+    pub fn elem(&self, x: Integer) -> FiniteFieldElement {
+        FiniteFieldElement::new(&self, x)
     }
 }
 
