@@ -1,5 +1,7 @@
 use mitcrypto::math::{
-    error::MathError, finite_field::finite_field::FiniteField, mod_ring::mod_ring::Zmod,
+    error::MathError,
+    finite_field::finite_field::FiniteField,
+    mod_ring::{mod_ring::Zmod, mod_ring_element::ZmodElement},
 };
 use rug::Integer;
 
@@ -16,6 +18,10 @@ impl RsaPublicKey {
             ring: Zmod::new(n)?,
             e,
         })
+    }
+
+    pub fn rsa(&self, m: Integer) -> Result<ZmodElement> {
+        Ok(self.ring.elem(m).pow(&self.e)?)
     }
 }
 
