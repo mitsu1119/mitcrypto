@@ -9,3 +9,4 @@ members = ["math", "rsa", "hash"]
 [dependencies]
 math = { path = "./math" }
 rsa = { path = "./rsa" }
+hash = { path = "./hash" }
