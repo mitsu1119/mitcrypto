@@ -1,1 +1,2 @@
-pub extern crate math;
+pub use math;
+pub use rsa;

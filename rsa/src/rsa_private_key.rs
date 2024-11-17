@@ -1,4 +1,4 @@
-use mitcrypto::math::{
+use math::{
     error::MathError,
     mod_ring::{mod_ring::Zmod, mod_ring_element::ZmodElement},
 };
@@ -6,15 +6,16 @@ use rug::{integer::IsPrime, Complete, Integer};
 
 type Result<T> = std::result::Result<T, MathError>;
 
-pub struct RsaPrivateKey<'a> {
+#[allow(dead_code)]
+pub struct RsaPrivateKey {
     ring: Zmod,
     p: Integer,
     q: Integer,
-    d: ZmodElement<'a>,
+    d: Integer,
 }
 
-impl<'a> RsaPrivateKey<'a> {
-    pub fn new(p: Integer, q: Integer, d: ZmodElement<'a>) -> Result<Self> {
+impl<'a> RsaPrivateKey {
+    pub fn new(p: Integer, q: Integer, d: Integer) -> Result<Self> {
         if p.is_probably_prime(100) == IsPrime::No || q.is_probably_prime(100) == IsPrime::No {
             Err(MathError::ValueError(
                 "parameter of rsa (p, q) must be a prime".into(),
@@ -29,11 +30,15 @@ impl<'a> RsaPrivateKey<'a> {
             })
         }
     }
+
+    pub fn decrypt(&self, c: Integer) -> Result<ZmodElement> {
+        Ok(self.ring.elem(c).pow(&self.d)?)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use mitcrypto::math::mod_ring::mod_ring::Zmod;
+    use math::mod_ring::mod_ring::Zmod;
     use rug::Integer;
 
     use super::RsaPrivateKey;
@@ -42,12 +47,10 @@ mod tests {
     fn rsa_private_key() {
         let pqs = [(Integer::from(3), Integer::from(5)), (Integer::from_str_radix("f271ff85ae050e6d5200e0bf2dab52e1267c02794fb775dceac60a5021c305a7bea422967abd785802945de02ec23ebf0fb1505895039c089d11b3786ebd5da5", 16).unwrap(), Integer::from_str_radix("eb563f222f6b00884811a3ba265c24bea54215ca6ffcab75adbcf81965fd3c599c41962ae2b906423ae2092707951cff1b2610057cfff85c313f67aa688e6121", 16).unwrap())];
         let ds = [Integer::from(1), Integer::from_str_radix("2cf2aecbfdb5f4665d17c9550db90a1bc42f4d4de26ad291c4fe70fab93c1420aed4fa2bc60da12464de1a53bf87b033223e2ce5eabae8dbcd981b143eb37cce4500d0386a4f563c023ef8614eec255ce2cb80a1162b91b9af9a17820fe701d16d011a5678ed130de490709c3de8ac7f15aa0ae8f78d30096f39a6445906a881", 16).unwrap()];
-        let rings = pqs.clone().map(|(p, q)| Zmod::new(p * q).unwrap());
         let private_keys = pqs
             .into_iter()
-            .zip(&rings)
             .zip(ds)
-            .map(|(((p, q), r), d)| RsaPrivateKey::new(p, q, r.elem(d)));
+            .map(|((p, q), d)| RsaPrivateKey::new(p, q, d));
 
         let ns = [
             Integer::from(15),
