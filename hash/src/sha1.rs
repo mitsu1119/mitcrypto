@@ -1,3 +1,5 @@
+use std::ops::Shl;
+
 pub struct Sha1 {}
 
 impl Sha1 {
@@ -5,13 +7,31 @@ impl Sha1 {
     const BLOCK_SIZE: usize = 64;
     const WORD_SIZE: usize = 4;
     const DIGEST_SIZE: usize = 20;
-    const IV: [[u8; Self::WORD_SIZE]; Self::DIGEST_SIZE / Self::WORD_SIZE] = [
-        [0x67, 0x45, 0x23, 0x01],
-        [0xef, 0xcd, 0xab, 0x89],
-        [0x98, 0xba, 0xdc, 0xfe],
-        [0x10, 0x32, 0x54, 0x76],
-        [0xc3, 0xd2, 0xe1, 0xf0],
-    ];
+    const IV: [u32; Self::DIGEST_SIZE / Self::WORD_SIZE] =
+        [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+    const K: [u32; 4] = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];
+
+    fn ft(x: u32, y: u32, z: u32, t: usize) -> u32 {
+        if t < 20 {
+            (x & y) ^ ((!x) & z)
+        } else if 40 <= t && t < 60 {
+            (x & y) ^ (x & z) ^ (y & z)
+        } else {
+            x ^ y ^ z
+        }
+    }
+
+    fn kt(t: usize) -> u32 {
+        if t < 20 {
+            Self::K[0]
+        } else if t < 40 {
+            Self::K[1]
+        } else if t < 60 {
+            Self::K[2]
+        } else {
+            Self::K[3]
+        }
+    }
 
     fn pad(m: Vec<u8>) -> Vec<u8> {
         let l = m.len();
@@ -45,6 +65,56 @@ impl Sha1 {
         }
         Ok(res)
     }
+
+    fn hash(m: Vec<u8>) -> Result<[u32; 5], Vec<u8>> {
+        let m = Self::parse(Self::pad(m)).unwrap();
+        println!("{:x?}", m);
+
+        let mut hs = Self::IV;
+        for block in m {
+            let mut a = hs[0];
+            let mut b = hs[1];
+            let mut c = hs[2];
+            let mut d = hs[3];
+            let mut e = hs[4];
+            let wts: [u32; 80] = {
+                let mut wts = [0; 80];
+                for t in 0..80 {
+                    if t < 16 {
+                        wts[t] = (block[4 * t] as u32).shl(24)
+                            | (block[4 * t + 1] as u32).shl(16)
+                            | (block[4 * t + 2] as u32).shl(8)
+                            | (block[4 * t + 3] as u32);
+                    } else {
+                        wts[t] = (wts[t - 3] ^ wts[t - 8] ^ wts[t - 14] ^ wts[t - 16] as u32)
+                            .rotate_left(1);
+                    };
+                }
+                wts
+            };
+            for t in 0..80 {
+                let tt = a
+                    .rotate_left(5)
+                    .wrapping_add(Self::ft(b, c, d, t))
+                    .wrapping_add(e)
+                    .wrapping_add(Self::kt(t))
+                    .wrapping_add(wts[t]);
+
+                e = d;
+                d = c;
+                c = b.rotate_left(30);
+                b = a;
+                a = tt;
+            }
+            hs[0] = hs[0].wrapping_add(a);
+            hs[1] = hs[1].wrapping_add(b);
+            hs[2] = hs[2].wrapping_add(c);
+            hs[3] = hs[3].wrapping_add(d);
+            hs[4] = hs[4].wrapping_add(e);
+        }
+
+        Ok(hs)
+    }
 }
 
 #[cfg(test)]
@@ -53,10 +123,10 @@ mod tests {
 
     #[test]
     fn pad() {
-        let tests = [vec![0xaa; 100]];
+        let tests = [vec![]];
 
         for v in tests {
-            println!("{:x?}", Sha1::parse(Sha1::pad(v)));
+            println!("{:x?}", Sha1::hash(v));
         }
         panic!();
     }
