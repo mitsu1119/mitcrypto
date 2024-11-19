@@ -66,9 +66,8 @@ impl Sha1 {
         Ok(res)
     }
 
-    fn hash(m: Vec<u8>) -> Result<[u32; 5], Vec<u8>> {
+    pub fn hash(m: Vec<u8>) -> Result<[u32; 5], Vec<u8>> {
         let m = Self::parse(Self::pad(m)).unwrap();
-        println!("{:x?}", m);
 
         let mut hs = Self::IV;
         for block in m {
@@ -119,15 +118,38 @@ impl Sha1 {
 
 #[cfg(test)]
 mod tests {
-    use super::Sha1;
+    use crate::sha1::Sha1;
+    use cavp_tester::cavp_test::CavpTest;
 
-    #[test]
-    fn pad() {
-        let tests = [vec![]];
+    fn digest_to_hexstring(digest: [u32; 5]) -> String {
+        format!(
+            "{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}",
+            digest[0], digest[1], digest[2], digest[3], digest[4]
+        )
+    }
 
-        for v in tests {
-            println!("{:x?}", Sha1::hash(v));
+    #[tokio::test]
+    async fn sha1() {
+        let test = CavpTest::new("test").unwrap();
+        test.download(cavp_tester::cavp_test::TestKind::SHA)
+            .await
+            .ok();
+
+        for t in test.sha1_byte_testvectors().unwrap() {
+            println!("Msg: {}", t.msg);
+
+            let md = if t.bit_len == 0 {
+                digest_to_hexstring(Sha1::hash(vec![]).unwrap())
+            } else {
+                let bytes_msg = (0..t.msg.len())
+                    .step_by(2)
+                    .map(|i| u8::from_str_radix(&t.msg[i..i + 2], 16).unwrap())
+                    .collect();
+                digest_to_hexstring(Sha1::hash(bytes_msg).unwrap())
+            };
+
+            println!("md: {}", md);
+            assert!(t.test(md.trim().to_string()).is_ok());
         }
-        panic!();
     }
 }
