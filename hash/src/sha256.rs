@@ -179,16 +179,28 @@ impl Sha256 {
 
 #[cfg(test)]
 mod tests {
+    use cavp_tester::cavp_test::CavpTest;
+
     use crate::digest::HashDigest;
 
     use super::Sha256;
 
-    #[test]
-    fn sha256() {
-        println!(
-            "{}",
-            Sha256::hash(b"testdayo\xff".into()).unwrap().hexdigest()
-        );
-        panic!();
+    #[tokio::test]
+    async fn sha256() {
+        // NIST CAVP Testing (https://csrc.nist.gov/Projects/Cryptographic-Algorithm-Validation-Program/Secure-Hashing#shavs)
+        let test = CavpTest::new("test").unwrap();
+        test.download(cavp_tester::cavp_test::TestKind::SHA)
+            .await
+            .ok();
+
+        for t in test.sha256_byte_testvectors().unwrap() {
+            let md = if t.bit_len == 0 {
+                Sha256::hash(vec![]).unwrap().hexdigest()
+            } else {
+                Sha256::hash(t.as_bytes().msg).unwrap().hexdigest()
+            };
+
+            assert!(t.test(md.trim().to_string()).is_ok());
+        }
     }
 }
