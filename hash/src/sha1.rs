@@ -160,11 +160,7 @@ mod tests {
             let md = if t.bit_len == 0 {
                 Sha1::hash(vec![]).unwrap().hexdigest()
             } else {
-                let bytes_msg = (0..t.msg.len())
-                    .step_by(2)
-                    .map(|i| u8::from_str_radix(&t.msg[i..i + 2], 16).unwrap())
-                    .collect();
-                Sha1::hash(bytes_msg).unwrap().hexdigest()
+                Sha1::hash(t.as_bytes().msg).unwrap().hexdigest()
             };
 
             assert!(t.test(md.trim().to_string()).is_ok());
