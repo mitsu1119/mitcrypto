@@ -1,5 +1,32 @@
 use std::ops::Shl;
 
+use crate::digest::HashDigest;
+
+pub struct Sha1Digest {
+    data: <Sha1Digest as HashDigest>::Digest,
+}
+
+impl Sha1Digest {
+    fn new(data: <Sha1Digest as HashDigest>::Digest) -> Self {
+        Self { data }
+    }
+}
+
+impl HashDigest for Sha1Digest {
+    type Digest = [u32; 5];
+
+    fn digest(&self) -> Self::Digest {
+        self.data
+    }
+
+    fn hexdigest(&self) -> String {
+        format!(
+            "{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}",
+            self.data[0], self.data[1], self.data[2], self.data[3], self.data[4]
+        )
+    }
+}
+
 pub struct Sha1 {}
 
 impl Sha1 {
@@ -66,7 +93,7 @@ impl Sha1 {
         Ok(res)
     }
 
-    pub fn hash(m: Vec<u8>) -> Result<[u32; 5], Vec<u8>> {
+    pub fn hash(m: Vec<u8>) -> Result<Sha1Digest, Vec<u8>> {
         let m = Self::parse(Self::pad(m)).unwrap();
 
         let mut hs = Self::IV;
@@ -112,43 +139,34 @@ impl Sha1 {
             hs[4] = hs[4].wrapping_add(e);
         }
 
-        Ok(hs)
+        Ok(Sha1Digest::new(hs))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::sha1::Sha1;
+    use crate::{digest::HashDigest, sha1::Sha1};
     use cavp_tester::cavp_test::CavpTest;
-
-    fn digest_to_hexstring(digest: [u32; 5]) -> String {
-        format!(
-            "{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}",
-            digest[0], digest[1], digest[2], digest[3], digest[4]
-        )
-    }
 
     #[tokio::test]
     async fn sha1() {
+        // NIST CAVP Testing (https://csrc.nist.gov/Projects/Cryptographic-Algorithm-Validation-Program/Secure-Hashing#shavs)
         let test = CavpTest::new("test").unwrap();
         test.download(cavp_tester::cavp_test::TestKind::SHA)
             .await
             .ok();
 
         for t in test.sha1_byte_testvectors().unwrap() {
-            println!("Msg: {}", t.msg);
-
             let md = if t.bit_len == 0 {
-                digest_to_hexstring(Sha1::hash(vec![]).unwrap())
+                Sha1::hash(vec![]).unwrap().hexdigest()
             } else {
                 let bytes_msg = (0..t.msg.len())
                     .step_by(2)
                     .map(|i| u8::from_str_radix(&t.msg[i..i + 2], 16).unwrap())
                     .collect();
-                digest_to_hexstring(Sha1::hash(bytes_msg).unwrap())
+                Sha1::hash(bytes_msg).unwrap().hexdigest()
             };
 
-            println!("md: {}", md);
             assert!(t.test(md.trim().to_string()).is_ok());
         }
     }
