@@ -200,7 +200,10 @@ impl Sha512 {
         Ok(res)
     }
 
-    pub fn hash(m: Vec<u8>) -> Result<Sha512Digest, Vec<u8>> {
+    pub fn hash_iv(
+        m: Vec<u8>,
+        iv: [u64; Self::DIGEST_SIZE / Self::WORD_SIZE],
+    ) -> Result<Sha512Digest, Vec<u8>> {
         let m = Self::parse(Self::pad(m)).unwrap();
 
         let mut hs = Self::IV;
@@ -250,6 +253,10 @@ impl Sha512 {
         }
 
         Ok(Sha512Digest::new(hs))
+    }
+
+    pub fn hash(m: Vec<u8>) -> Result<Sha512Digest, Vec<u8>> {
+        Self::hash_iv(m, Self::IV)
     }
 }
 
