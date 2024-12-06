@@ -129,9 +129,16 @@ impl Sha256 {
     }
 
     pub fn hash(m: Vec<u8>) -> Result<Sha256Digest, Vec<u8>> {
+        Self::hash_iv(m, Self::IV)
+    }
+
+    pub fn hash_iv(
+        m: Vec<u8>,
+        iv: [u32; Self::DIGEST_SIZE / Self::WORD_SIZE],
+    ) -> Result<Sha256Digest, Vec<u8>> {
         let m = Self::parse(Self::pad(m)).unwrap();
 
-        let mut hs = Self::IV;
+        let mut hs = iv;
         for block in m {
             let mut tmps = hs;
             let wts: [u32; 64] = {

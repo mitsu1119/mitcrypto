@@ -1,4 +1,4 @@
-use crate::digest::HashDigest;
+use crate::{digest::HashDigest, sha256::Sha256};
 
 pub struct Sha224Digest {
     data: <Sha224Digest as HashDigest>::Digest,
@@ -43,50 +43,17 @@ impl Sha224 {
         0xbefa4fa4,
     ];
 
-    fn pad(m: Vec<u8>) -> Vec<u8> {
-        let l = m.len();
-        let mods = (l + 1) % Self::BLOCK_SIZE;
-        let k = if mods > 56 {
-            Self::BLOCK_SIZE - (mods - 56)
-        } else if mods < 56 {
-            56 - mods
-        } else {
-            0
-        };
-        let res = {
-            let mut res = m;
-            res.push(0b10000000);
-            res.extend(vec![0x0 as u8; k]);
-            for i in 1..9 {
-                res.push((((l * 8) & ((0xff) << (8 * (8 - i)))) >> (64 - 8 * i)) as u8);
-            }
-            res
-        };
-        res
-    }
-
-    fn parse(m: Vec<u8>) -> Result<Vec<[u8; Self::BLOCK_SIZE]>, Vec<u8>> {
-        if m.len() % Self::BLOCK_SIZE != 0 {
-            return Err(m);
-        }
-        let mut res = vec![];
-        for block in m.chunks(Self::BLOCK_SIZE) {
-            res.push(block.try_into().unwrap());
-        }
-        Ok(res)
-    }
-
     pub fn hash(m: Vec<u8>) -> Result<Sha224Digest, Vec<u8>> {
-        let m = Self::parse(Self::pad(m)).unwrap();
+        let sha256 = Sha256::hash_iv(m, Self::IV)?;
 
-        let mut hs = Self::IV;
-
-        Ok(Sha224Digest::new(hs[0..7].try_into().unwrap()))
+        Ok(Sha224Digest::new(sha256.digest()[0..7].try_into().unwrap()))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{digest::HashDigest, sha224::Sha224};
+
     #[test]
     fn sha224() {}
 }
