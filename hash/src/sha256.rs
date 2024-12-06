@@ -20,17 +20,11 @@ impl HashDigest for Sha256Digest {
     }
 
     fn hexdigest(&self) -> String {
-        format!(
-            "{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}{:0>8x?}",
-            self.data[0],
-            self.data[1],
-            self.data[2],
-            self.data[3],
-            self.data[4],
-            self.data[5],
-            self.data[6],
-            self.data[7]
-        )
+        let mut res = String::new();
+        for i in self.data {
+            res.push_str(&format!("{:0>8x?}", i));
+        }
+        res
     }
 }
 
