@@ -206,7 +206,7 @@ impl Sha512 {
     ) -> Result<Sha512Digest, Vec<u8>> {
         let m = Self::parse(Self::pad(m)).unwrap();
 
-        let mut hs = Self::IV;
+        let mut hs = iv;
         for block in m {
             let mut tmps = hs;
             let wts: [u64; 80] = {
