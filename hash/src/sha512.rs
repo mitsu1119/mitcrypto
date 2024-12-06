@@ -255,12 +255,28 @@ impl Sha512 {
 
 #[cfg(test)]
 mod tests {
+    use cavp_tester::cavp_test::CavpTest;
+
     use crate::digest::HashDigest;
 
     use super::Sha512;
 
-    #[test]
-    fn sha512() {
-        panic!();
+    #[tokio::test]
+    async fn sha512() {
+        // NIST CAVP Testing (https://csrc.nist.gov/Projects/Cryptographic-Algorithm-Validation-Program/Secure-Hashing#shavs)
+        let test = CavpTest::new("test").unwrap();
+        test.download(cavp_tester::cavp_test::TestKind::SHA)
+            .await
+            .ok();
+
+        for t in test.sha512_byte_testvectors().unwrap() {
+            let md = if t.bit_len == 0 {
+                Sha512::hash(vec![]).unwrap().hexdigest()
+            } else {
+                Sha512::hash(t.as_bytes().msg).unwrap().hexdigest()
+            };
+
+            assert!(t.test(md.trim().to_string()).is_ok());
+        }
     }
 }
