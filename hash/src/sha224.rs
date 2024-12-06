@@ -52,8 +52,26 @@ impl Sha224 {
 
 #[cfg(test)]
 mod tests {
+    use cavp_tester::cavp_test::CavpTest;
+
     use crate::{digest::HashDigest, sha224::Sha224};
 
-    #[test]
-    fn sha224() {}
+    #[tokio::test]
+    async fn sha224() {
+        // NIST CAVP Testing (https://csrc.nist.gov/Projects/Cryptographic-Algorithm-Validation-Program/Secure-Hashing#shavs)
+        let test = CavpTest::new("test").unwrap();
+        test.download(cavp_tester::cavp_test::TestKind::SHA)
+            .await
+            .ok();
+
+        for t in test.sha224_byte_testvectors().unwrap() {
+            let md = if t.bit_len == 0 {
+                Sha224::hash(vec![]).unwrap().hexdigest()
+            } else {
+                Sha224::hash(t.as_bytes().msg).unwrap().hexdigest()
+            };
+
+            assert!(t.test(md.trim().to_string()).is_ok());
+        }
+    }
 }
