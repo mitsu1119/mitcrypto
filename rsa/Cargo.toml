@@ -1,8 +1,0 @@
-[package]
-name = "rsa"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-math = { path = "../math" }
-rug = "1.26.1"
