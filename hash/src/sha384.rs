@@ -32,7 +32,7 @@ impl Sha384 {
     // bytes
     const BLOCK_SIZE: usize = 128;
     const WORD_SIZE: usize = 8;
-    const DIGEST_SIZE: usize = 48;
+    pub const DIGEST_SIZE: usize = 48;
     const IV: [u64; 8] = [
         0xcbbb9d5dc1059ed8,
         0x629a292a367cd507,

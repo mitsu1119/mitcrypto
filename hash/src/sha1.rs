@@ -33,7 +33,7 @@ impl Sha1 {
     // bytes
     const BLOCK_SIZE: usize = 64;
     const WORD_SIZE: usize = 4;
-    const DIGEST_SIZE: usize = 20;
+    pub const DIGEST_SIZE: usize = 20;
     const IV: [u32; Self::DIGEST_SIZE / Self::WORD_SIZE] =
         [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
     const K: [u32; 4] = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];

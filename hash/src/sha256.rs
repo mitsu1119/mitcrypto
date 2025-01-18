@@ -34,7 +34,7 @@ impl Sha256 {
     // bytes
     const BLOCK_SIZE: usize = 64;
     const WORD_SIZE: usize = 4;
-    const DIGEST_SIZE: usize = 32;
+    pub const DIGEST_SIZE: usize = 32;
     const IV: [u32; Self::DIGEST_SIZE / Self::WORD_SIZE] = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
         0x5be0cd19,

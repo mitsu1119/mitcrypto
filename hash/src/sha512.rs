@@ -34,7 +34,7 @@ impl Sha512 {
     // bytes
     const BLOCK_SIZE: usize = 128;
     const WORD_SIZE: usize = 8;
-    const DIGEST_SIZE: usize = 64;
+    pub const DIGEST_SIZE: usize = 64;
     const IV: [u64; Self::DIGEST_SIZE / Self::WORD_SIZE] = [
         0x6a09e667f3bcc908,
         0xbb67ae8584caa73b,

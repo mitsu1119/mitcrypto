@@ -6,7 +6,7 @@ use crate::error::Pkcs1Error;
 
 type Result<T> = std::result::Result<T, Pkcs1Error>;
 
-fn i2osp(x: Integer, x_len: usize) -> Result<Vec<u8>> {
+pub fn i2osp(x: Integer, x_len: usize) -> Result<Vec<u8>> {
     if x < 0 {
         return Err(Pkcs1Error::ValueError(
             "integer must be non-negative".into(),
@@ -29,7 +29,7 @@ fn i2osp(x: Integer, x_len: usize) -> Result<Vec<u8>> {
     Ok(res)
 }
 
-fn os2ip(octets: Vec<u8>) -> Integer {
+pub fn os2ip(octets: Vec<u8>) -> Integer {
     let mut res = Integer::ZERO;
 
     if octets.len() > 0 {

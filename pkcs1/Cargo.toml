@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 math = { path = "../math" }
 rug = "1.26.1"
+hash = { path = "../hash" }
