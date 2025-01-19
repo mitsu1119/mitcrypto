@@ -112,6 +112,10 @@ impl<'a> ZmodElement<'a> {
             )))
         }
     }
+
+    pub fn as_integer(&self) -> &Integer {
+        &self.x
+    }
 }
 
 impl<'a> AddAssign for ZmodElement<'a> {

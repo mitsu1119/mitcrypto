@@ -6,9 +6,10 @@ use rug::Integer;
 
 type Result<T> = std::result::Result<T, MathError>;
 
+#[derive(Clone)]
 pub struct RsaPublicKey {
-    ring: Zmod,
-    e: Integer,
+    pub ring: Zmod,
+    pub e: Integer,
 }
 
 impl RsaPublicKey {

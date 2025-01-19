@@ -10,6 +10,21 @@ impl Sha1Digest {
     fn new(data: <Sha1Digest as HashDigest>::Digest) -> Self {
         Self { data }
     }
+
+    pub fn digest_u8(&self) -> Vec<u8> {
+        self.digest()
+            .map(|x| {
+                [
+                    ((x >> 24) & 0xff) as u8,
+                    ((x >> 16) & 0xff) as u8,
+                    ((x >> 8) & 0xff) as u8,
+                    (x & 0xff) as u8,
+                ]
+            })
+            .into_iter()
+            .flatten()
+            .collect()
+    }
 }
 
 impl HashDigest for Sha1Digest {
@@ -33,6 +48,7 @@ impl Sha1 {
     // bytes
     const BLOCK_SIZE: usize = 64;
     const WORD_SIZE: usize = 4;
+    pub const MAX_MESSAGE_SIZE: usize = 0x1fffffffffffffff;
     pub const DIGEST_SIZE: usize = 20;
     const IV: [u32; Self::DIGEST_SIZE / Self::WORD_SIZE] =
         [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];

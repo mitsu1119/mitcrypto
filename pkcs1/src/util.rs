@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use rug::{ops::Pow, Complete, Integer};
+use rug::{Complete, Integer};
 
 use crate::error::Pkcs1Error;
 
