@@ -174,11 +174,13 @@ mod tests {
 
     #[test]
     fn encrypt() {
-        let p = Integer::from_str_radix("eabd3a31df44c8dbe59063925b1ad83555abdf34e056f8cc88be97a8bf386e163e076523aabd54c7afc17d07f6f77ddfa1af5923cb1cd9272cfc76afbd422bb3", 16).unwrap();
-        let q = Integer::from_str_radix("f3e18cf05b052e567137ec63081286636b5bc910da4421976817c0fbffe0ec139e1d87414d121e1606138e6b84f62fcfab5a8bc738bf0c2c9ce609803ea83715", 16).unwrap();
-        let n = Integer::from_str_radix("dfa06fc95d735ed753af82d3d68573179c2688901158b091d7ead83e693a1d4029e2400a929236294135307886d042ade385a7f29f9cdfccb6d6a8dde980a6f143341fc93eabb5e276df1d9f709402fdcb3b2c4b26e8a7716f51574a115621d6de7088afac07aa4090920b5e95a366c12e73f9905638adabacd0dc95c5490aaf", 16).unwrap();
+        // The test vector is taken from (https://github.com/pyca/cryptography/blob/main/vectors/cryptography_vectors/asymmetric/RSA/pkcs-1v2-1d2-vec/oaep-vect.txt)
+
+        let n = Integer::from_str_radix("a8b3b284af8eb50b387034a860f146c4919f318763cd6c5598c8ae4811a1e0abc4c7e0b082d693a5e7fced675cf4668512772c0cbc64a742c6c630f533c8cc72f62ae833c40bf25842e984bb78bdbf97c0107d55bdb662f5c4e0fab9845cb5148ef7392dd3aaff93ae1e6b667bb3d4247616d4f5ba10d4cfd226de88d39f16fb", 16).unwrap();
         let e = Integer::from(0x10001);
-        let d = Integer::from_str_radix("39c93479bd4b3dbbb8a546d244c1d13ecd9beb7806f37b1504cd6bb99ce9667b99171ce35e82a7ba3b5e6a3b0ae33007cd1e518ad191f106ee4c43f0ac11119214d4bec6d1cc0c4168d95ba5d0b6b04e67b76e2b149469998e106c52fe1034acd146068a0b4de78a04ea07db919632cf9b071574aef6c8d26512a10fb05c6459", 16).unwrap();
+        let d = Integer::from_str_radix("53339cfdb79fc8466a655c7316aca85c55fd8f6dd898fdaf119517ef4f52e8fd8e258df93fee180fa0e4ab29693cd83b152a553d4ac4d1812b8b9fa5af0e7f55fe7304df41570926f3311f15c4d65a732c483116ee3d3d2d0af3549ad9bf7cbfb78ad884f84d5beb04724dc7369b31def37d0cf539e9cfcdd3de653729ead5d1 ", 16).unwrap();
+        let p = Integer::from_str_radix("d32737e7267ffe1341b2d5c0d150a81b586fb3132bed2f8d5262864a9cb9f30af38be448598d413a172efb802c21acf1c11c520c2f26a471dcad212eac7ca39d", 16).unwrap();
+        let q = Integer::from_str_radix("cc8853d1d54da630fac004f471f281c7b8982d8224a490edbeb33d3e3d5cc93c4765703d1dd791642f1f116a0dd852be2419b2af72bfe9a030e860b0288b5d77", 16).unwrap();
         let pubkey = RsaPublicKey::new(n, e).unwrap();
         let private_key = RsaPrivateKey::new(p, q, d).unwrap();
 
@@ -192,12 +194,21 @@ mod tests {
             0x53, 0x23, 0x97, 0xd5, 0x0d, 0xba, 0x79, 0xb9, 0x87, 0x00, 0x4a, 0xfe, 0xfe, 0x34,
         ];
 
-        let res = RsaOaep::encrypt_with_seed(m, pubkey.clone(), label.clone(), seed).unwrap();
+        let test = RsaOaep::encrypt_with_seed(m, pubkey.clone(), label.clone(), seed).unwrap();
 
-        println!("");
+        let res = vec![
+            0x35, 0x4f, 0xe6, 0x7b, 0x4a, 0x12, 0x6d, 0x5d, 0x35, 0xfe, 0x36, 0xc7, 0x77, 0x79,
+            0x1a, 0x3f, 0x7b, 0xa1, 0x3d, 0xef, 0x48, 0x4e, 0x2d, 0x39, 0x08, 0xaf, 0xf7, 0x22,
+            0xfa, 0xd4, 0x68, 0xfb, 0x21, 0x69, 0x6d, 0xe9, 0x5d, 0x0b, 0xe9, 0x11, 0xc2, 0xd3,
+            0x17, 0x4f, 0x8a, 0xfc, 0xc2, 0x01, 0x03, 0x5f, 0x7b, 0x6d, 0x8e, 0x69, 0x40, 0x2d,
+            0xe5, 0x45, 0x16, 0x18, 0xc2, 0x1a, 0x53, 0x5f, 0xa9, 0xd7, 0xbf, 0xc5, 0xb8, 0xdd,
+            0x9f, 0xc2, 0x43, 0xf8, 0xcf, 0x92, 0x7d, 0xb3, 0x13, 0x22, 0xd6, 0xe8, 0x81, 0xea,
+            0xa9, 0x1a, 0x99, 0x61, 0x70, 0xe6, 0x57, 0xa0, 0x5a, 0x26, 0x64, 0x26, 0xd9, 0x8c,
+            0x88, 0x00, 0x3f, 0x84, 0x77, 0xc1, 0x22, 0x70, 0x94, 0xa0, 0xd9, 0xfa, 0x1e, 0x8c,
+            0x40, 0x24, 0x30, 0x9c, 0xe1, 0xec, 0xcc, 0xb5, 0x21, 0x00, 0x35, 0xd4, 0x7a, 0xc7,
+            0x2e, 0x8a,
+        ];
 
-        let m = RsaOaep::decrypt(res, pubkey, private_key, label).unwrap();
-        println!("m: {:x?}", m);
-        panic!();
+        assert_eq!(test, res);
     }
 }
