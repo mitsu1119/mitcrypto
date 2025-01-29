@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use crate::{error::MathError, finite_field::finite_field::FiniteField};
+use crate::finite_field::{finite_field::FiniteField, finite_field_element::FiniteFieldElement};
 
-type Result<T> = std::result::Result<T, MathError>;
+use super::polynomial_modp_element::PolynomialModpElement;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolynomialModp {
@@ -17,29 +17,14 @@ impl PolynomialModp {
     pub fn base(&self) -> &FiniteField {
         &self.base
     }
+
+    pub fn elem<'a>(&'a self, coeffs: Vec<FiniteFieldElement<'a>>) -> PolynomialModpElement {
+        PolynomialModpElement::new(self, coeffs)
+    }
 }
 
 impl Display for PolynomialModp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Univariate polynomial ring over {}", self.base)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use rug::Integer;
-
-    use crate::finite_field::finite_field::FiniteField;
-
-    use super::PolynomialModp;
-
-    #[test]
-    fn polynomial_mod_p() {
-        let f = FiniteField::new(Integer::from(13)).unwrap();
-        let fx = PolynomialModp::new(f);
-
-        println!("{}", fx);
-
-        panic!();
     }
 }

@@ -31,6 +31,10 @@ impl<'a> FiniteFieldElement<'a> {
         }
     }
 
+    pub fn parent(&self) -> &'a FiniteField {
+        self.parent
+    }
+
     fn add(&mut self, rhs: Self) {
         if self.parent != rhs.parent {
             panic!(

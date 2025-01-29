@@ -34,6 +34,14 @@ impl FiniteField {
     pub fn elem(&self, x: Integer) -> FiniteFieldElement {
         FiniteFieldElement::new(self, x)
     }
+
+    pub fn zero(&self) -> FiniteFieldElement {
+        self.elem(Integer::from(0))
+    }
+
+    pub fn one(&self) -> FiniteFieldElement {
+        self.elem(Integer::from(1))
+    }
 }
 
 impl Display for FiniteField {
