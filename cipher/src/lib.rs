@@ -1,52 +1,11 @@
-use std::{
-    os::linux::raw::stat,
-    sync::{Arc, Mutex},
-};
+pub mod error;
 
-use log::{debug, info, Log};
-
-struct TestLogger {
-    // log messages
-    logs: Arc<Mutex<Vec<String>>>,
-}
-
-impl TestLogger {
-    fn new() -> Self {
-        Self {
-            logs: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
-    fn logs(&self) -> Vec<String> {
-        self.logs.lock().unwrap().clone()
-    }
-
-    fn clear_logs(&self) {
-        self.logs.lock().unwrap().clear();
-    }
-}
-
-impl Log for TestLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= log::Level::Debug
-    }
-
-    fn log(&self, record: &log::Record) {
-        if self.enabled(record.metadata()) {
-            let log_message = format!("{}: {}", record.level(), record.args());
-            let mut logs = self.logs.lock().unwrap();
-            println!("{}", log_message);
-            logs.push(log_message);
-        }
-    }
-
-    fn flush(&self) {
-        // do nothing
-    }
-}
+use error::CipherError;
+type Result<T> = std::result::Result<T, error::CipherError>;
 
 type Block = [u8; AES::BLOCK_SIZE];
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AES {
     key: Vec<u8>,
 }
@@ -94,15 +53,18 @@ impl AES {
         0x7D,
     ];
 
-    pub fn new(key: &[u8]) -> Self {
+    pub fn new(key: &[u8]) -> Result<Self> {
         if ![16, 25, 32].contains(&key.len()) {
-            panic!("Invalid key length");
+            return Err(CipherError::ValueError(format!(
+                "Invalid AES key length ({} bits)",
+                key.len() * 8
+            )));
         }
-        Self { key: key.to_vec() }
+        Ok(Self { key: key.to_vec() })
     }
 
     pub fn encrypt(&self, plaintext: Block) -> Block {
-        debug!("plaintext: {:?}", plaintext);
+        log(plaintext);
         *b"testtesttesttest"
     }
 
@@ -117,29 +79,82 @@ impl AES {
 }
 
 #[cfg(test)]
+use std::cell::RefCell;
+#[cfg(test)]
+use std::rc::Rc;
+
+#[cfg(test)]
+thread_local!(static AES_LOG: Rc<RefCell<Vec<Block>>> = Rc::new(RefCell::new(vec![])));
+
+#[cfg(test)]
+fn get_aes_log() -> Rc<RefCell<Vec<Block>>> {
+    AES_LOG.with(|log| log.clone())
+}
+
+// テスト時の中間結果のロギング
+#[inline]
+fn log(block: Block) {
+    #[cfg(test)]
+    {
+        get_aes_log().borrow_mut().push(block);
+    }
+}
+
+#[cfg(test)]
+fn log_clear() {
+    get_aes_log().borrow_mut().clear();
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
-    fn setup_logger() -> Arc<TestLogger> {
-        let logger = Arc::new(TestLogger::new());
-
-        log::set_boxed_logger(Box::new(logger.clone())).expect("set logger");
-        log::set_max_level(log::LevelFilter::Debug);
-
-        logger
+    fn setup() {
+        log_clear();
     }
 
     #[test]
     fn test_aes() {
-        let logger = setup_logger();
+        setup();
 
         let key = b"testtesttesttest";
-        let aes = AES::new(key);
+        let aes = AES::new(key).unwrap();
+        let plaintext = *b"testtesttesttest";
+        let ciphertext = aes.encrypt(plaintext);
+        for _ in 0..10 {
+            let ciphertext = aes.encrypt(ciphertext);
+        }
+
+        println!("{}", get_aes_log().borrow().len());
+        println!("{:?}", *get_aes_log());
+
+        panic!("ugya");
+    }
+
+    #[test]
+    fn test_aes2() {
+        setup();
+
+        let key = b"testtesttesttest";
+        let aes = AES::new(key).unwrap();
         let plaintext = *b"testtesttesttest";
         let ciphertext = aes.encrypt(plaintext);
 
-        println!("{:?}", logger.logs());
+        println!("{:?}", *get_aes_log());
 
         panic!("ugya");
+    }
+
+    #[test]
+    fn aes_invalid_key_length() {
+        let key = b"testtesttest";
+        let aes = AES::new(key);
+
+        assert_eq!(
+            aes,
+            Err(CipherError::ValueError(
+                "Invalid AES key length (96 bits)".to_string()
+            ))
+        );
     }
 }
