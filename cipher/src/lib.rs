@@ -1,4 +1,5 @@
 pub mod error;
+mod log;
 
 use error::CipherError;
 type Result<T> = std::result::Result<T, error::CipherError>;
@@ -6,31 +7,7 @@ type Result<T> = std::result::Result<T, error::CipherError>;
 type Block = [u8; AES::BLOCK_SIZE];
 
 #[cfg(test)]
-mod aes_log {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-    type ContentType = crate::Block;
-    thread_local!(static LOG: Rc<RefCell<Vec<ContentType>>> = Rc::new(RefCell::new(vec![])));
-    // ログを丸々取得
-    pub fn get() -> Rc<RefCell<Vec<ContentType>>> {
-        LOG.with(|log| log.clone())
-    }
-    // ログの追加
-    #[inline]
-    pub fn push(block: ContentType) {
-        get().borrow_mut().push(block);
-    }
-    // ログのポップ
-    #[inline]
-    pub fn pop() -> Option<ContentType> {
-        get().borrow_mut().pop()
-    }
-    // クリア
-    #[inline]
-    pub fn clear() {
-        get().borrow_mut().clear();
-    }
-}
+prog_log!(aes_log, crate::Block);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AES {
