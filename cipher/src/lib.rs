@@ -5,6 +5,33 @@ type Result<T> = std::result::Result<T, error::CipherError>;
 
 type Block = [u8; AES::BLOCK_SIZE];
 
+#[cfg(test)]
+mod aes_log {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    type ContentType = crate::Block;
+    thread_local!(static LOG: Rc<RefCell<Vec<ContentType>>> = Rc::new(RefCell::new(vec![])));
+    // ログを丸々取得
+    pub fn get() -> Rc<RefCell<Vec<ContentType>>> {
+        LOG.with(|log| log.clone())
+    }
+    // ログの追加
+    #[inline]
+    pub fn push(block: ContentType) {
+        get().borrow_mut().push(block);
+    }
+    // ログのポップ
+    #[inline]
+    pub fn pop() -> Option<ContentType> {
+        get().borrow_mut().pop()
+    }
+    // クリア
+    #[inline]
+    pub fn clear() {
+        get().borrow_mut().clear();
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AES {
     key: Vec<u8>,
@@ -64,7 +91,8 @@ impl AES {
     }
 
     pub fn encrypt(&self, plaintext: Block) -> Block {
-        log(plaintext);
+        #[cfg(test)]
+        aes_log::push(plaintext);
         *b"testtesttesttest"
     }
 
@@ -79,38 +107,11 @@ impl AES {
 }
 
 #[cfg(test)]
-use std::cell::RefCell;
-#[cfg(test)]
-use std::rc::Rc;
-
-#[cfg(test)]
-thread_local!(static AES_LOG: Rc<RefCell<Vec<Block>>> = Rc::new(RefCell::new(vec![])));
-
-#[cfg(test)]
-fn get_aes_log() -> Rc<RefCell<Vec<Block>>> {
-    AES_LOG.with(|log| log.clone())
-}
-
-// テスト時の中間結果のロギング
-#[inline]
-fn log(block: Block) {
-    #[cfg(test)]
-    {
-        get_aes_log().borrow_mut().push(block);
-    }
-}
-
-#[cfg(test)]
-fn log_clear() {
-    get_aes_log().borrow_mut().clear();
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
     fn setup() {
-        log_clear();
+        aes_log::clear();
     }
 
     #[test]
@@ -125,8 +126,9 @@ mod tests {
             let ciphertext = aes.encrypt(ciphertext);
         }
 
-        println!("{}", get_aes_log().borrow().len());
-        println!("{:?}", *get_aes_log());
+        let log = aes_log::get();
+        println!("{}", log.borrow().len());
+        println!("{:?}", log);
 
         panic!("ugya");
     }
@@ -140,7 +142,7 @@ mod tests {
         let plaintext = *b"testtesttesttest";
         let ciphertext = aes.encrypt(plaintext);
 
-        println!("{:?}", *get_aes_log());
+        println!("{:?}", aes_log::get());
 
         panic!("ugya");
     }
