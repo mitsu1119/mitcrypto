@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["math", "hash", "pkcs1"]
+members = ["math", "hash", "pkcs1", "cipher"]
 
 [dependencies]
 math = { path = "./math" }
 hash = { path = "./hash" }
 pkcs1 = { path = "./pkcs1" }
+cipher = { path = "./cipher" }
