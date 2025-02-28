@@ -1,10 +1,25 @@
 pub mod error;
 mod log;
 
+use std::fmt::Display;
+
 use error::CipherError;
 type Result<T> = std::result::Result<T, error::CipherError>;
 
-type Block = [u8; AES::BLOCK_SIZE];
+type Word = [u8; 4];
+type State = [Word; 4]; // [column][row]
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Block([u8; AES::BLOCK_SIZE]);
+
+impl Display for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for i in 0..AES::BLOCK_SIZE {
+            write!(f, "{:02x}", self.0[i])?;
+        }
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 prog_log!(aes_log, crate::Block);
@@ -16,6 +31,7 @@ pub struct AES {
 
 impl AES {
     const BLOCK_SIZE: usize = 16;
+
     const S_BOX: &'static [u8] = &[
         0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB,
         0x76, 0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4,
@@ -68,18 +84,161 @@ impl AES {
     }
 
     pub fn encrypt(&self, plaintext: Block) -> Block {
-        #[cfg(test)]
-        aes_log::push(plaintext);
-        *b"testtesttesttest"
+        let ws = self.key_expansion();
+        let mut state = AES::block_to_state(plaintext);
+        let nr = self.num_rounds();
+
+        AES::add_round_key(&mut state, &ws[..4]);
+        for i in 0..(nr - 1) {
+            AES::sub_bytes(&mut state);
+            AES::shift_rows(&mut state);
+            AES::mix_columns(&mut state);
+            AES::add_round_key(&mut state, &ws[4 * i + 4..4 * i + 8]);
+        }
+        AES::sub_bytes(&mut state);
+        AES::shift_rows(&mut state);
+        AES::add_round_key(&mut state, &ws[4 * nr..]);
+
+        AES::state_to_block(state)
+    }
+
+    fn sub_bytes(state: &mut State) {
+        for column in state.iter_mut() {
+            for byte in column {
+                *byte = AES::S_BOX[*byte as usize];
+            }
+        }
+        AES::log_state(&state);
+    }
+
+    fn shift_rows(state: &mut State) {
+        (state[0], state[1], state[2], state[3]) = (
+            [state[0][0], state[1][1], state[2][2], state[3][3]],
+            [state[1][0], state[2][1], state[3][2], state[0][3]],
+            [state[2][0], state[3][1], state[0][2], state[1][3]],
+            [state[3][0], state[0][1], state[1][2], state[2][3]],
+        );
+        AES::log_state(&state);
+    }
+
+    fn mix_columns(state: &mut State) {
+        fn xtime(x: u8) -> u8 {
+            if x & 0b10000000 != 0 {
+                (x << 1) ^ 0b11011
+            } else {
+                x << 1
+            }
+        }
+
+        for column in state.iter_mut() {
+            let u = column[0] ^ column[1] ^ column[2] ^ column[3];
+            let v = column[0];
+            column[0] ^= u ^ xtime(column[0] ^ column[1]);
+            column[1] ^= u ^ xtime(column[1] ^ column[2]);
+            column[2] ^= u ^ xtime(column[2] ^ column[3]);
+            column[3] ^= u ^ xtime(column[3] ^ v);
+        }
+        AES::log_state(&state);
+    }
+
+    fn add_round_key(state: &mut State, round_key: &[Word]) {
+        for i in 0..4 {
+            for j in 0..4 {
+                state[i][j] ^= round_key[i][j];
+            }
+        }
+        AES::log_state(&state);
     }
 
     /*
-     * ブロックにステート行列としてアクセス
-     * ステート行列：state[column][row]
+     * self.key から 4*(Nr + 1) ワードのラウンド鍵を生成
+     */
+    fn key_expansion(&self) -> Vec<Word> {
+        fn rot_word(word: Word) -> Word {
+            [word[1], word[2], word[3], word[0]]
+        }
+        fn sub_word(word: Word) -> Word {
+            [
+                AES::S_BOX[word[0] as usize],
+                AES::S_BOX[word[1] as usize],
+                AES::S_BOX[word[2] as usize],
+                AES::S_BOX[word[3] as usize],
+            ]
+        }
+        fn word_xor(a: Word, b: Word) -> Word {
+            [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+        }
+
+        let nr = self.num_rounds();
+        let nk = self.key.len() / 4;
+        let rcon: &[u8] = &[0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+
+        let mut key_schedule = vec![];
+        for i in 0..(4 * (nr + 1)) {
+            if i < nk {
+                key_schedule.push([
+                    self.key[4 * i],
+                    self.key[4 * i + 1],
+                    self.key[4 * i + 2],
+                    self.key[4 * i + 3],
+                ]);
+            } else if i % nk == 0 {
+                let mut tmp = word_xor(
+                    key_schedule[i - nk],
+                    sub_word(rot_word(key_schedule[i - 1])),
+                );
+                tmp[0] ^= rcon[i / nk - 1];
+                key_schedule.push(tmp);
+            } else if nk > 6 && i % nk == 4 {
+                key_schedule.push(word_xor(
+                    key_schedule[i - nk],
+                    sub_word(key_schedule[i - 1]),
+                ));
+            } else {
+                key_schedule.push(word_xor(key_schedule[i - nk], key_schedule[i - 1]));
+            }
+        }
+        key_schedule
+    }
+
+    // ラウンド数
+    fn num_rounds(&self) -> usize {
+        match self.key.len() {
+            16 => 10,
+            24 => 12,
+            32 => 14,
+            _ => unreachable!(),
+        }
+    }
+
+    /*
+     * ブロック <-> ステート
      */
     #[inline]
-    fn state_at(bytes: Block, i: usize, j: usize) -> u8 {
-        bytes[i * 4 + j]
+    fn state_to_block(state: State) -> Block {
+        let mut block = [0; 16];
+        for i in 0..4 {
+            for j in 0..4 {
+                block[i * 4 + j] = state[i][j];
+            }
+        }
+        Block(block)
+    }
+    #[inline]
+    fn block_to_state(block: Block) -> State {
+        let mut state = [[0; 4]; 4];
+        for i in 0..4 {
+            for j in 0..4 {
+                state[i][j] = block.0[i * 4 + j];
+            }
+        }
+        state
+    }
+
+    #[inline]
+    fn log_state(state: &State) {
+        #[cfg(test)]
+        aes_log::push(AES::state_to_block(*state));
     }
 }
 
@@ -94,32 +253,16 @@ mod tests {
     #[test]
     fn test_aes() {
         setup();
-
-        let key = b"testtesttesttest";
+        let key = b"+~\x15\x16(\xae\xd2\xa6\xab\xf7\x15\x88\t\xcfO<";
         let aes = AES::new(key).unwrap();
-        let plaintext = *b"testtesttesttest";
-        let ciphertext = aes.encrypt(plaintext);
-        for _ in 0..10 {
-            let ciphertext = aes.encrypt(ciphertext);
-        }
+        let plaintext = b"k\xc1\xbe\xe2.@\x9f\x96\xe9=~\x11s\x93\x17*";
+        let ciphertext = aes.encrypt(Block(*plaintext));
 
         let log = aes_log::get();
         println!("{}", log.borrow().len());
-        println!("{:?}", log);
-
-        panic!("ugya");
-    }
-
-    #[test]
-    fn test_aes2() {
-        setup();
-
-        let key = b"testtesttesttest";
-        let aes = AES::new(key).unwrap();
-        let plaintext = *b"testtesttesttest";
-        let ciphertext = aes.encrypt(plaintext);
-
-        println!("{:?}", aes_log::get());
+        for block in log.borrow().iter() {
+            println!("{}", block);
+        }
 
         panic!("ugya");
     }
